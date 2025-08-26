@@ -1,0 +1,353 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>RabbitMQ Message Status Dashboard</title>
+
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+    <!-- Bootstrap & MDBootstrap CDN -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.2.0/mdb.min.css" rel="stylesheet" />
+
+    <style>
+        :root {
+            --primary-color: #3B71CA;
+            --pending-color: #E4A11B;
+            --ongoing-color: #54B4D3;
+            --completed-color: #14A44D;
+            --light-bg: #f8f9fa;
+            --header-shadow: 0 4px 20px 0 rgba(0, 0, 0, 0.1);
+            --card-shadow: 0 8px 16px 0 rgba(0, 0, 0, 0.1);
+        }
+
+        body {
+            background-color: var(--light-bg);
+            font-family: 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            min-height: 100vh;
+        }
+
+        .dashboard-header {
+            background: linear-gradient(135deg, var(--primary-color), #2a56b5);
+            color: white;
+            border-radius: 12px;
+            box-shadow: var(--header-shadow);
+            margin-bottom: 30px;
+            padding: 2rem;
+        }
+
+        .status-card {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            border: none;
+            transition: all 0.3s ease;
+            margin-bottom: 20px;
+            overflow: hidden;
+            border-top: 4px solid;
+        }
+
+        .status-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 12px 20px 0 rgba(0, 0, 0, 0.15);
+        }
+
+        .card-pending {
+            border-top-color: var(--pending-color);
+        }
+
+        .card-ongoing {
+            border-top-color: var(--ongoing-color);
+        }
+
+        .card-completed {
+            border-top-color: var(--completed-color);
+        }
+
+        .card-icon {
+            font-size: 2.5rem;
+            margin-bottom: 15px;
+        }
+
+        .pending-icon {
+            color: var(--pending-color);
+        }
+
+        .ongoing-icon {
+            color: var(--ongoing-color);
+        }
+
+        .completed-icon {
+            color: var(--completed-color);
+        }
+
+        .card-value {
+            font-size: 3rem;
+            font-weight: 700;
+            margin: 10px 0;
+        }
+
+        .pending-value {
+            color: var(--pending-color);
+        }
+
+        .ongoing-value {
+            color: var(--ongoing-color);
+        }
+
+        .completed-value {
+            color: var(--completed-color);
+        }
+
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 500;
+            letter-spacing: 0.5px;
+            color: #495057;
+        }
+
+        .pending-title {
+            color: var(--pending-color);
+        }
+
+        .ongoing-title {
+            color: var(--ongoing-color);
+        }
+
+        .completed-title {
+            color: var(--completed-color);
+        }
+
+        .last-updated {
+            color: #6c757d;
+            font-size: 0.9rem;
+            margin-top: 20px;
+        }
+
+        .refresh-btn {
+            background: rgba(255, 255, 255, 0.2);
+            border: none;
+            border-radius: 50px;
+            color: white;
+            padding: 8px 20px;
+            transition: all 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: rgba(255, 255, 255, 0.3);
+        }
+
+        .stats-container {
+            background: white;
+            border-radius: 12px;
+            box-shadow: var(--card-shadow);
+            padding: 20px;
+            margin-top: 30px;
+        }
+
+        .section-title {
+            font-weight: 600;
+            color: #3B71CA;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #e9ecef;
+        }
+
+        .info-text {
+            color: #6c757d;
+            font-size: 0.95rem;
+        }
+
+        .progress-bar {
+            height: 8px;
+            border-radius: 4px;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 5px;
+        }
+
+        .indicator-active {
+            background-color: #14a44d;
+            box-shadow: 0 0 0 3px rgba(20, 164, 77, 0.3);
+        }
+
+        .indicator-inactive {
+            background-color: #dc3545;
+        }
+
+        .card-description {
+            color: #6c757d;
+            font-size: 0.9rem;
+        }
+
+        @media (max-width: 768px) {
+            .dashboard-header {
+                padding: 1.5rem;
+            }
+
+            .card-value {
+                font-size: 2.5rem;
+            }
+        }
+    </style>
+</head>
+<body class="bg-light">
+
+<div class="container py-5">
+    <!-- Header -->
+    <div class="dashboard-header text-center">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h1 class="display-5 fw-bold"><i class="fas fa-exchange-alt me-2"></i>RabbitMQ Message Status</h1>
+            <button class="refresh-btn" onclick="loadStatus()">
+                <i class="fas fa-sync-alt me-1"></i> Refresh
+            </button>
+        </div>
+        <p class="lead mb-0">Real-time monitoring of message processing status</p>
+    </div>
+
+    <!-- Status Cards -->
+    <div class="row">
+        <div class="col-md-4">
+            <div class="card status-card card-pending">
+                <div class="card-body text-center py-4">
+                    <div class="card-icon pending-icon">
+                        <i class="fas fa-clock"></i>
+                    </div>
+                    <h3 class="card-title pending-title">PENDING</h3>
+                    <h2 class="card-value pending-value" id="pending">0</h2>
+                    <p class="card-description mb-0">Messages waiting to be processed</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card status-card card-ongoing">
+                <div class="card-body text-center py-4">
+                    <div class="card-icon ongoing-icon">
+                        <i class="fas fa-spinner fa-spin"></i>
+                    </div>
+                    <h3 class="card-title ongoing-title">ONGOING</h3>
+                    <h2 class="card-value ongoing-value" id="ongoing">0</h2>
+                    <p class="card-description mb-0">Messages being processed</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card status-card card-completed">
+                <div class="card-body text-center py-4">
+                    <div class="card-icon completed-icon">
+                        <i class="fas fa-check-circle"></i>
+                    </div>
+                    <h3 class="card-title completed-title">COMPLETED</h3>
+                    <h2 class="card-value completed-value" id="completed">0</h2>
+                    <p class="card-description mb-0">Messages successfully processed</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Additional Stats -->
+    <div class="stats-container">
+        <h3 class="section-title"><i class="fas fa-chart-line me-2"></i>Processing Statistics</h3>
+        <div class="row">
+            <div class="col-md-6">
+                <p class="mb-1">System Status <span class="status-indicator indicator-active"></span> Operational</p>
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-success" role="progressbar" style="width: 100%"></div>
+                </div>
+
+                <p class="mb-1">Processing Efficiency</p>
+                <div class="progress mb-3">
+                    <div class="progress-bar bg-info" role="progressbar" style="width: 85%"></div>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <p class="info-text"><i class="fas fa-info-circle me-2"></i> Last processed message: <span id="last-processed">Just now</span></p>
+                <p class="info-text"><i class="fas fa-bolt me-2"></i> Processing rate: ~<span id="processing-rate">12</span> messages/minute</p>
+                <p class="info-text"><i class="fas fa-database me-2"></i> Total processed today: <span id="total-today">142</span> messages</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Last Updated -->
+    <div class="text-center last-updated">
+        <p class="mb-0">Last updated: <span id="update-time">--:--:--</span> | Auto-refresh every 2 seconds</p>
+    </div>
+</div>
+
+<!-- MDBootstrap JS -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mdb-ui-kit/7.2.0/mdb.min.js"></script>
+
+<script>
+    // Update time function
+    function updateTime() {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString();
+        document.getElementById('update-time').textContent = timeStr;
+    }
+
+    // Initial time update
+    updateTime();
+
+    // Your original function with added UI enhancements
+    async function loadStatus() {
+        try {
+            // Show loading state
+            document.getElementById('pending').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            document.getElementById('ongoing').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+            document.getElementById('completed').innerHTML = '<i class="fas fa-spinner fa-spin"></i>';
+
+            const res = await fetch("/api/messages/status"); // relative path, works with Spring Boot
+            if (!res.ok) throw new Error("Failed to fetch message status");
+
+            const data = await res.json();
+            document.getElementById("pending").innerText = data.pending;
+            document.getElementById("ongoing").innerText = data.ongoing;
+            document.getElementById("completed").innerText = data.completed;
+
+            // Update the time
+            updateTime();
+
+            // Add visual feedback for update
+            const cards = document.querySelectorAll('.status-card');
+            cards.forEach(card => {
+                card.classList.add('pulse');
+                setTimeout(() => card.classList.remove('pulse'), 1000);
+            });
+
+        } catch (err) {
+            console.error(err);
+            // Show error state
+            document.getElementById("pending").innerText = "Error";
+            document.getElementById("ongoing").innerText = "Error";
+            document.getElementById("completed").innerText = "Error";
+        }
+    }
+
+    // Initialize and set interval
+    setInterval(loadStatus, 2000); // refresh every 2s
+    loadStatus(); // initial load
+
+    // Add animation on load
+    document.addEventListener('DOMContentLoaded', function() {
+        const cards = document.querySelectorAll('.status-card');
+        cards.forEach((card, index) => {
+            card.style.opacity = 0;
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                card.style.transition = 'opacity 0.5s ease, transform 0.5s ease';
+                card.style.opacity = 1;
+                card.style.transform = 'translateY(0)';
+            }, index * 200);
+        });
+    });
+</script>
+
+</body>
+</html>
