@@ -5,3 +5,25 @@
 
 
 <img width="1902" height="951" alt="Screenshot_1" src="https://github.com/user-attachments/assets/17065a79-42c9-4976-b513-5bcde5f7284d" />
+
+
+
+postman api
+
+POST - http://localhost:9090/api/messages/pending
+Body
+
+Bank transaction 1
+
+
+
+CHECK STATUS
+GET - http://localhost:9090/api/messages/status
+
+
+OUTPUT:
+{
+    "pending": 2,
+    "ongoing": 1,
+    "completed": 2
+}
